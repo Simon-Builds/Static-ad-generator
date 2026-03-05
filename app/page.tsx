@@ -48,6 +48,7 @@ export default function SeedreamSandbox() {
     const [genStep, setGenStep] = useState<GenStep>('idle');
     const [stepMessage, setStepMessage] = useState('');
     const [campaignCards, setCampaignCards] = useState<CampaignCard[]>([]);
+    const [filterPersona, setFilterPersona] = useState<string>('All');
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -204,6 +205,7 @@ export default function SeedreamSandbox() {
         // Prepend new cards to the existing list so they appear at the top
         setCampaignCards(prev => [...initialCards, ...prev]);
         setGenStep('generating');
+        setFilterPersona('All');
 
         // ── Step 1: Generate images in parallel directly using Nano Banana ──────
         setStepMessage(`Generating ${selectedPersonaObjects.length} images in parallel...`);
@@ -527,18 +529,35 @@ export default function SeedreamSandbox() {
 
                     {campaignCards.length > 0 && (
                         <div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                                <div className="persona-filters" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    <button
+                                        onClick={() => setFilterPersona('All')}
+                                        className={`ad-persona-badge filter-badge ${filterPersona === 'All' ? 'active' : ''}`}
+                                    >
+                                        All Personas
+                                    </button>
+                                    {Array.from(new Set(campaignCards.map(c => c.persona))).map(p => (
+                                        <button
+                                            key={p}
+                                            onClick={() => setFilterPersona(p)}
+                                            className={`ad-persona-badge filter-badge ${filterPersona === p ? 'active' : ''}`}
+                                        >
+                                            {p}
+                                        </button>
+                                    ))}
+                                </div>
                                 <button
                                     className="btn-action"
-                                    style={{ color: '#ff3b30', borderColor: '#ffd6d6', background: '#fff9f9' }}
-                                    onClick={() => { setCampaignCards([]); setGenStep('idle'); setStepMessage(''); }}
+                                    style={{ color: '#ff3b30', borderColor: '#ffd6d6', background: '#fff9f9', marginLeft: 'auto' }}
+                                    onClick={() => { setCampaignCards([]); setGenStep('idle'); setStepMessage(''); setFilterPersona('All'); }}
                                 >
                                     <Trash2 size={16} />
                                     Clear All
                                 </button>
                             </div>
                             <div className="ad-grid">
-                                {campaignCards.map((card, i) => (
+                                {campaignCards.filter(c => filterPersona === 'All' || c.persona === filterPersona).map((card, i) => (
                                     <div key={i} className={`ad-card ${card.status}`}>
                                         {/* Image area */}
                                         <div className="ad-image-area">
@@ -672,8 +691,21 @@ export default function SeedreamSandbox() {
           letter-spacing: 0.05em;
           background: #f1f1f1;
           color: #555;
-          padding: 3px 10px;
+          padding: 4px 10px;
           border-radius: 20px;
+          border: none;
+        }
+        .filter-badge {
+          cursor: pointer;
+          border: 1px solid transparent;
+          transition: all 0.2s;
+        }
+        .filter-badge:hover {
+          background: #e1e1e1;
+        }
+        .filter-badge.active {
+          background: #000;
+          color: #fff;
         }
         .ad-copy-text {
           font-size: 0.95rem;
