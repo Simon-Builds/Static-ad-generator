@@ -99,7 +99,6 @@ export default function BrandKit() {
         >
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
                 <div style={{ textAlign: 'left' }}>
-                    <span className="badge">Groq Llama 4 Scout</span>
                     <h1>Brand Kit</h1>
                     <p className="subtitle">Identify and analyze psychological buyer personas</p>
                 </div>
