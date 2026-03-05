@@ -50,6 +50,7 @@ export default function SeedreamSandbox() {
     const [stepMessage, setStepMessage] = useState('');
     const [campaignCards, setCampaignCards] = useState<CampaignCard[]>([]);
     const [filterPersona, setFilterPersona] = useState<string>('All');
+    const [expandedImage, setExpandedImage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -582,7 +583,16 @@ export default function SeedreamSandbox() {
                                                 </div>
                                             )}
                                             {card.status === 'done' && card.imageUrl && (
-                                                <img src={card.imageUrl} alt={card.persona} />
+                                                <div
+                                                    style={{ position: 'relative', cursor: 'zoom-in', width: '100%', height: '100%' }}
+                                                    onClick={() => setExpandedImage(card.imageUrl)}
+                                                    className="ad-image-wrapper"
+                                                >
+                                                    <img src={card.imageUrl} alt={card.persona} />
+                                                    <div className="expand-overlay">
+                                                        <span>Click to expand</span>
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
 
@@ -613,6 +623,18 @@ export default function SeedreamSandbox() {
                     )}
                 </div>
             </div>
+
+            {/* Expanded Image Modal */}
+            {expandedImage && (
+                <div className="image-modal" onClick={() => setExpandedImage(null)}>
+                    <div className="image-modal-content" onClick={e => e.stopPropagation()}>
+                        <button className="close-modal-btn" onClick={() => setExpandedImage(null)}>
+                            <X size={24} color="white" />
+                        </button>
+                        <img src={expandedImage} alt="Expanded Ad" />
+                    </div>
+                </div>
+            )}
 
             <style jsx>{`
         .campaign-layout {
@@ -711,10 +733,86 @@ export default function SeedreamSandbox() {
         }
         .ad-copy-text {
           font-size: 0.95rem;
-          line-height: 1.5;
-          color: #222;
-          font-style: italic;
-          margin-top: 6px;
+          color: #333;
+          line-height: 1.4;
+        }
+
+        .ad-image-wrapper {
+          overflow: hidden;
+        }
+        .expand-overlay {
+          position: absolute;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.4);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+          color: white;
+          font-weight: 500;
+          font-size: 0.9rem;
+          backdrop-filter: blur(2px);
+        }
+        .ad-image-wrapper:hover .expand-overlay {
+          opacity: 1;
+        }
+        .expand-overlay span {
+          background: rgba(0,0,0,0.6);
+          padding: 8px 16px;
+          border-radius: 20px;
+        }
+
+        /* Image Modal */
+        .image-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.85);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 40px;
+          animation: fade-in 0.2s ease-out;
+        }
+        .image-modal-content {
+          position: relative;
+          max-width: 90vw;
+          max-height: 90vh;
+        }
+        .image-modal-content img {
+          max-width: 100%;
+          max-height: 90vh;
+          border-radius: 8px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+          display: block;
+        }
+        .close-modal-btn {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: rgba(255, 255, 255, 0.1);
+          border: none;
+          border-radius: 50%;
+          width: 48px;
+          height: 48px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .close-modal-btn:hover {
+          background: rgba(255, 255, 255, 0.2);
+          transform: scale(1.05);
+        }
+
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         .step-progress {
           background: #fafafa;
