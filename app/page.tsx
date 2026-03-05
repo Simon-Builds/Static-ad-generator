@@ -23,8 +23,14 @@ type GenStep = 'idle' | 'generating' | 'done';
 
 export default function SeedreamSandbox() {
     // Image inputs
-    const [competitorImage, setCompetitorImage] = useState<string | null>(null);
-    const [productImage, setProductImage] = useState<string | null>(null);
+    const [competitorImage, setCompetitorImage] = useState<string | null>(() => {
+        if (typeof window !== 'undefined') return localStorage.getItem('competitor_image');
+        return null;
+    });
+    const [productImage, setProductImage] = useState<string | null>(() => {
+        if (typeof window !== 'undefined') return localStorage.getItem('product_image');
+        return null;
+    });
     const competitorInputRef = useRef<HTMLInputElement>(null);
     const productInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,7 +48,13 @@ export default function SeedreamSandbox() {
     // Generation state
     const [genStep, setGenStep] = useState<GenStep>('idle');
     const [stepMessage, setStepMessage] = useState('');
-    const [campaignCards, setCampaignCards] = useState<CampaignCard[]>([]);
+    const [campaignCards, setCampaignCards] = useState<CampaignCard[]>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('campaign_cards');
+            return saved ? JSON.parse(saved) : [];
+        }
+        return [];
+    });
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -52,6 +64,7 @@ export default function SeedreamSandbox() {
                 try {
                     const parsed = JSON.parse(saved);
                     setPersonas(parsed);
+                    // Only set selected if not already set or if fresh load
                     setSelectedPersonas(new Set(parsed.map((p: Persona) => p.archetype)));
                 } catch (e) {
                     console.error("Failed to parse personas", e);
@@ -59,6 +72,28 @@ export default function SeedreamSandbox() {
             }
         }
     }, []);
+
+    // Persist images
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            if (competitorImage) localStorage.setItem('competitor_image', competitorImage);
+            else localStorage.removeItem('competitor_image');
+        }
+    }, [competitorImage]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            if (productImage) localStorage.setItem('product_image', productImage);
+            else localStorage.removeItem('product_image');
+        }
+    }, [productImage]);
+
+    // Persist campaign results
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('campaign_cards', JSON.stringify(campaignCards));
+        }
+    }, [campaignCards]);
 
     const togglePersona = (archetype: string) => {
         setSelectedPersonas(prev => {
