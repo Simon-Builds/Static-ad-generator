@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Upload, Loader2, Sparkles, Image as ImageIcon, X, LayoutTemplate, ChevronDown, ChevronUp, Layers, Target, CheckCircle2, Circle, AlertCircle, Heart, Download, Trash2 } from "lucide-react";
 import Link from "next/link";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 interface Persona {
     archetype: string;
@@ -37,6 +39,7 @@ export default function SeedreamSandbox() {
     const [selectedPersonas, setSelectedPersonas] = useState<Set<string>>(new Set());
 
     // Output settings
+    const [campaignName, setCampaignName] = useState<string>("My Campaign");
     const [aspectRatio, setAspectRatio] = useState<string>("1:1");
     const [volume, setVolume] = useState<number>(1);
     const [adherence, setAdherence] = useState<'High' | 'Medium' | 'Low'>('High');
@@ -237,33 +240,42 @@ export default function SeedreamSandbox() {
         ));
     };
 
-    const downloadImage = async (url: string, filename: string) => {
+    const downloadZip = async (cardsToDownload: CampaignCard[], suffix: string) => {
+        if (cardsToDownload.length === 0) return;
+
         try {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const blobUrl = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(blobUrl);
+            const zip = new JSZip();
+            const safeCampaignName = campaignName.trim().replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'campaign';
+
+            for (let i = 0; i < cardsToDownload.length; i++) {
+                const card = cardsToDownload[i];
+                if (!card.imageUrl) continue;
+
+                const response = await fetch(card.imageUrl);
+                const blob = await response.blob();
+
+                const num = String(i + 1).padStart(3, '0');
+                const pName = card.persona.trim().replace(/[^a-z0-9]/gi, '-').toLowerCase();
+                const filename = `${safeCampaignName}_${num}_${pName}.jpg`;
+
+                zip.file(filename, blob);
+            }
+
+            const zipContent = await zip.generateAsync({ type: "blob" });
+            saveAs(zipContent, `${safeCampaignName}_${suffix}.zip`);
         } catch (e) {
-            console.error("Download failed", e);
+            console.error("ZIP download failed", e);
         }
     };
 
     const downloadAll = () => {
-        campaignCards.filter(c => c.imageUrl && c.status === 'done').forEach((c, i) => {
-            if (c.imageUrl) downloadImage(c.imageUrl, `ad-${c.persona.toLowerCase().replace(/\s+/g, '-')}-${i}.jpg`);
-        });
+        const toDownload = campaignCards.filter(c => c.imageUrl && c.status === 'done');
+        downloadZip(toDownload, 'all');
     };
 
     const downloadFavorites = () => {
-        campaignCards.filter(c => c.imageUrl && c.status === 'done' && c.isFavorite).forEach((c, i) => {
-            if (c.imageUrl) downloadImage(c.imageUrl, `ad-fav-${c.persona.toLowerCase().replace(/\s+/g, '-')}-${i}.jpg`);
-        });
+        const toDownload = campaignCards.filter(c => c.imageUrl && c.status === 'done' && c.isFavorite);
+        downloadZip(toDownload, 'favorites');
     };
 
     const toggleSection = (s: string) => setExpandedSection(expandedSection === s ? null : s);
@@ -410,6 +422,18 @@ export default function SeedreamSandbox() {
                         </div>
                         {expandedSection === 'output' && (
                             <div className="accordion-content">
+                                <div className="form-group" style={{ marginBottom: '14px' }}>
+                                    <label>Campaign Name</label>
+                                    <input
+                                        type="text"
+                                        className="select-input"
+                                        placeholder="e.g. Summer Sale 2026"
+                                        value={campaignName}
+                                        onChange={e => setCampaignName(e.target.value)}
+                                        style={{ marginTop: '0', marginBottom: '4px' }}
+                                    />
+                                    <p style={{ fontSize: '0.75rem', color: '#aaa' }}>This will be used to name your downloaded files.</p>
+                                </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                                     <div className="form-group">
                                         <label>Volume</label>
