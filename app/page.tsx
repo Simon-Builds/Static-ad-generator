@@ -45,6 +45,7 @@ export default function SeedreamSandbox() {
     // Output settings
     const [aspectRatio, setAspectRatio] = useState<string>("1:1");
     const [volume, setVolume] = useState<number>(1);
+    const [adherence, setAdherence] = useState<'High' | 'Medium' | 'Low'>('High');
 
     // Generation state
     const [genStep, setGenStep] = useState<GenStep>('idle');
@@ -133,9 +134,20 @@ export default function SeedreamSandbox() {
     // Build the Seedream prompt from the ad copy — no Grok involvement here.
     // Build the prompt for Nano Banana Pro — bypassing Llama entirely 
     const generateSingleImage = async (persona: Persona, productDesc: string, productImg: string | null, competitorImg: string | null) => {
+        let blendInstruction = '';
+        if (competitorImg && productImg) {
+            if (adherence === 'High') {
+                blendInstruction = 'Blend the two reference images: strictly follow the exact layout, composition, and visual style of the first image when placing the product from the second image.';
+            } else if (adherence === 'Medium') {
+                blendInstruction = 'Blend the two reference images: use the first image as a loose stylistic reference, but feel free to adapt the layout creatively to better feature the product from the second image.';
+            } else {
+                blendInstruction = 'Create an entirely new and highly creative advertisement featuring the product from the second image. Only take very loose thematic inspiration from the first image; completely rethink the layout.';
+            }
+        }
+
         const adPrompt = [
             'Create a professional static advertisement.',
-            competitorImg && productImg ? 'Blend the two reference images: take the product from the second image and place it within the layout and visual style of the first image.' : '',
+            blendInstruction,
             `Product description: "${productDesc}".`,
             `Target audience: ${persona.archetype}. Pain: "${persona.pain}". Angle: "${persona.angle}". Emotion: "${persona.emotion}".`,
             `Analyze the product and persona. Write short, punchy ad copy tailored exactly to their core pain and emotion.`,
@@ -415,7 +427,21 @@ export default function SeedreamSandbox() {
                                         </select>
                                     </div>
                                 </div>
-                                <p style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '10px' }}>
+                                <div className="form-group" style={{ marginTop: '14px' }}>
+                                    <label>Adherence to Competitor Ad</label>
+                                    <div className="segmented-control">
+                                        {['High', 'Medium', 'Low'].map((level) => (
+                                            <button
+                                                key={level}
+                                                className={`segment ${adherence === level ? 'active' : ''}`}
+                                                onClick={() => setAdherence(level as any)}
+                                            >
+                                                {level}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <p style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '14px' }}>
                                     One image is generated per selected persona.
                                     {selectedPersonas.size > 0 && ` ${selectedPersonas.size} image${selectedPersonas.size > 1 ? 's' : ''} will be generated.`}
                                 </p>
@@ -724,6 +750,30 @@ export default function SeedreamSandbox() {
           justify-content: center;
           box-shadow: 0 2px 6px rgba(0,0,0,0.12);
           z-index: 10;
+        }
+        .segmented-control {
+          display: flex;
+          background: #f1f1f1;
+          border-radius: 80px;
+          padding: 4px;
+          margin-top: 8px;
+        }
+        .segment {
+          flex: 1;
+          background: transparent;
+          border: none;
+          padding: 8px 12px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #777;
+          border-radius: 80px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .segment.active {
+          background: #fff;
+          color: #000;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         .download-group {
           display: flex;
