@@ -58,6 +58,19 @@ export default function SeedreamSandbox() {
     const [error, setError] = useState<string | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
 
+    // Rate limiting
+    const [dailyRemaining, setDailyRemaining] = useState<number | null>(null);
+    const [dailyLimit, setDailyLimit] = useState<number>(2);
+
+    const fetchRateLimit = async () => {
+        try {
+            const res = await fetch('/api/rate-limit');
+            const data = await res.json();
+            setDailyRemaining(data.remaining);
+            setDailyLimit(data.limit);
+        } catch { /* fail silently */ }
+    };
+
     useEffect(() => {
         // Load everything from localStorage once on mount
         setCompetitorImage(localStorage.getItem('competitor_image'));
@@ -97,6 +110,7 @@ export default function SeedreamSandbox() {
         }
 
         setIsInitialized(true);
+        fetchRateLimit();
     }, []);
 
     // ──────────────── Persistence Effects (Only save after initialization) ────────────────
@@ -222,6 +236,10 @@ export default function SeedreamSandbox() {
             setError(`Volume (${volume}) cannot be lower than the number of selected personas (${selectedPersonas.size}).`);
             return;
         }
+        if (dailyRemaining !== null && volume > dailyRemaining) {
+            setError(`You only have ${dailyRemaining} generation${dailyRemaining !== 1 ? 's' : ''} remaining today. Reduce volume to ${dailyRemaining} or less.`);
+            return;
+        }
 
         const productDescription = typeof window !== 'undefined' ? localStorage.getItem('brand_kit_prompt') || '' : '';
         const selectedPersonaObjects = personas.filter(p => selectedPersonas.has(p.archetype));
@@ -276,6 +294,7 @@ export default function SeedreamSandbox() {
 
         setGenStep('done');
         setStepMessage('');
+        fetchRateLimit(); // Refresh remaining count
     };
 
     const toggleFavorite = (id: string) => {
@@ -565,9 +584,17 @@ export default function SeedreamSandbox() {
                         className="primary"
                         onClick={runCampaign}
                         style={{ marginTop: '12px', padding: '20px', fontSize: '1.05rem' }}
+                        disabled={dailyRemaining === 0}
                     >
                         <><Sparkles size={22} style={{ marginRight: '10px', display: 'inline' }} /> Generate Campaign</>
                     </button>
+                    {dailyRemaining !== null && (
+                        <p style={{ fontSize: '0.75rem', color: dailyRemaining === 0 ? '#ff3b30' : '#aaa', marginTop: '8px', textAlign: 'center' }}>
+                            {dailyRemaining === 0
+                                ? `Daily limit reached (${dailyLimit}/${dailyLimit}). Come back tomorrow!`
+                                : `${dailyRemaining}/${dailyLimit} generations remaining today`}
+                        </p>
+                    )}
 
                     {/* Step progress indicator */}
                     {(isRunning || genStep === 'done') && (

@@ -1,8 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Replicate from 'replicate';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
     try {
+        // ── Rate limiting ──
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+        try {
+            const rl = await checkRateLimit(ip);
+            if (!rl.success) {
+                return NextResponse.json(
+                    { error: `Daily limit reached (${rl.limit} images/day). Come back tomorrow!`, remaining: 0, limit: rl.limit },
+                    { status: 429 }
+                );
+            }
+            console.log(`[RateLimit] IP ${ip}: ${rl.remaining}/${rl.limit} remaining`);
+        } catch (rlError) {
+            // Fail open — if Redis is down, allow the request
+            console.warn('[RateLimit] Redis unavailable, allowing request:', rlError);
+        }
+
         const { prompt, image, competitorImage, aspect_ratio } = await req.json();
 
         if (!prompt) {
