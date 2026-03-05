@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Users, Send, ArrowLeft } from "lucide-react";
+import { Loader2, Users, Send, ArrowLeft, Plus, X } from "lucide-react";
 import Link from "next/link";
 
 interface CustomerProfile {
@@ -27,6 +27,27 @@ export default function BrandKit() {
     });
     const [isProfiling, setIsProfiling] = useState(false);
     const [profileError, setProfileError] = useState<string | null>(null);
+
+    const [isAddingCustom, setIsAddingCustom] = useState(false);
+    const [customPersona, setCustomPersona] = useState<CustomerProfile>({
+        archetype: '',
+        pain: '',
+        angle: '',
+        emotion: ''
+    });
+
+    const addCustomPersona = () => {
+        if (!customPersona.archetype.trim() || !customPersona.pain.trim() || !customPersona.angle.trim() || !customPersona.emotion.trim()) {
+            setProfileError("Please fill out all fields for the custom persona.");
+            return;
+        }
+        setProfileError(null);
+        const newProfiles = [customPersona, ...profiles];
+        setProfiles(newProfiles);
+        localStorage.setItem('active_personas', JSON.stringify(newProfiles));
+        setCustomPersona({ archetype: '', pain: '', angle: '', emotion: '' });
+        setIsAddingCustom(false);
+    };
 
     const generateProfiles = async () => {
         if (!customerPrompt.trim()) {
@@ -93,19 +114,81 @@ export default function BrandKit() {
                             style={{ minHeight: '150px' }}
                         />
                     </div>
-                    <button
-                        className="primary"
-                        onClick={generateProfiles}
-                        disabled={isProfiling}
-                    >
-                        {isProfiling ? (
-                            <><Loader2 className="loader" size={20} style={{ marginRight: '8px', display: 'inline' }} /> Analyzing Audience...</>
-                        ) : (
-                            <><Send size={18} style={{ marginRight: '8px', display: 'inline' }} /> Generate 10 Profiles</>
-                        )}
-                    </button>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                        <button
+                            className="primary"
+                            onClick={generateProfiles}
+                            disabled={isProfiling}
+                            style={{ flex: 1 }}
+                        >
+                            {isProfiling ? (
+                                <><Loader2 className="loader" size={20} style={{ marginRight: '8px', display: 'inline' }} /> Analyzing Audience...</>
+                            ) : (
+                                <><Send size={18} style={{ marginRight: '8px', display: 'inline' }} /> Generate 10 Profiles</>
+                            )}
+                        </button>
+                        <button
+                            className="secondary"
+                            onClick={() => setIsAddingCustom(!isAddingCustom)}
+                            disabled={isProfiling}
+                            style={{ padding: '0 20px' }}
+                        >
+                            {isAddingCustom ? <><X size={18} style={{ marginRight: '8px', display: 'inline' }} /> Cancel</> : <><Plus size={18} style={{ marginRight: '8px', display: 'inline' }} /> Add Custom Persona</>}
+                        </button>
+                    </div>
                     {profileError && <div className="error-message">{profileError}</div>}
                 </div>
+
+                {isAddingCustom && (
+                    <div className="card" style={{ marginBottom: '32px', background: '#fafafa', border: '1px dashed #ccc' }}>
+                        <h3 style={{ marginBottom: '16px', fontSize: '1.2rem' }}>Add Custom Persona</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                            <div className="form-group">
+                                <label>Archetype (Name)</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. The Busy Professional"
+                                    className="select-input"
+                                    value={customPersona.archetype}
+                                    onChange={(e) => setCustomPersona({ ...customPersona, archetype: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Core Emotion</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Overwhelmed but aspiring"
+                                    className="select-input"
+                                    value={customPersona.emotion}
+                                    onChange={(e) => setCustomPersona({ ...customPersona, emotion: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Pain Point</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. No time to cook healthy meals"
+                                    className="select-input"
+                                    value={customPersona.pain}
+                                    onChange={(e) => setCustomPersona({ ...customPersona, pain: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Marketing Angle</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Time-saving convenience without compromise"
+                                    className="select-input"
+                                    value={customPersona.angle}
+                                    onChange={(e) => setCustomPersona({ ...customPersona, angle: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <button className="primary" onClick={addCustomPersona}>
+                            Add Persona
+                        </button>
+                    </div>
+                )}
 
                 {profiles.length > 0 && (
                     <div className="profile-grid">
@@ -131,6 +214,19 @@ export default function BrandKit() {
                 )}
             </section>
 
+            <style jsx>{`
+                .select-input {
+                  width: 100%;
+                  padding: 11px 12px;
+                  border-radius: 8px;
+                  border: 1px solid #eee;
+                  background: #fff;
+                  font-size: 0.9rem;
+                  margin-top: 8px;
+                  outline: none;
+                }
+                .select-input:focus { border-color: #000; }
+            `}</style>
         </main>
     );
 }
