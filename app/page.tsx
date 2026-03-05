@@ -14,6 +14,7 @@ interface Persona {
 }
 
 interface CampaignCard {
+    id: string;
     persona: string;
     adCopy: string;
     imageUrl: string | null;
@@ -57,7 +58,11 @@ export default function SeedreamSandbox() {
         const savedCards = localStorage.getItem('campaign_cards');
         if (savedCards) {
             try {
-                setCampaignCards(JSON.parse(savedCards));
+                const parsed = JSON.parse(savedCards).map((c: any) => ({
+                    ...c,
+                    id: c.id || Math.random().toString(36).substring(2, 11)
+                }));
+                setCampaignCards(parsed);
             } catch (e) { }
         }
     }, []);
@@ -196,6 +201,7 @@ export default function SeedreamSandbox() {
 
         // Initialize new cards in pending state
         const initialCards: CampaignCard[] = selectedPersonaObjects.map((p) => ({
+            id: Math.random().toString(36).substring(2, 11),
             persona: p.archetype,
             adCopy: "AI generating copy natively...",
             imageUrl: null,
@@ -210,11 +216,12 @@ export default function SeedreamSandbox() {
         // ── Step 1: Generate images in parallel directly using Nano Banana ──────
         setStepMessage(`Generating ${selectedPersonaObjects.length} images in parallel...`);
 
-        setCampaignCards(prev => prev.map((card, idx) =>
-            idx < selectedPersonaObjects.length ? { ...card, status: 'generating' } : card
+        setCampaignCards(prev => prev.map((card) =>
+            initialCards.some(ic => ic.id === card.id) ? { ...card, status: 'generating' } : card
         ));
 
         await Promise.all(selectedPersonaObjects.map(async (p, i) => {
+            const cardId = initialCards[i].id;
             // Stagger requests by 500ms to allow smooth parallel generation
             if (i > 0) {
                 await new Promise(resolve => setTimeout(resolve, i * 500));
@@ -222,12 +229,12 @@ export default function SeedreamSandbox() {
 
             try {
                 const imageUrl = await generateSingleImage(p, productDescription, productImage, competitorImage);
-                setCampaignCards(prev => prev.map((card, idx) =>
-                    idx === i ? { ...card, imageUrl, status: 'done' } : card
+                setCampaignCards(prev => prev.map((card) =>
+                    card.id === cardId ? { ...card, imageUrl, status: 'done' } : card
                 ));
             } catch (err: any) {
-                setCampaignCards(prev => prev.map((card, idx) =>
-                    idx === i ? { ...card, status: 'error', errorMsg: err.message } : card
+                setCampaignCards(prev => prev.map((card) =>
+                    card.id === cardId ? { ...card, status: 'error', errorMsg: err.message } : card
                 ));
             }
         }));
@@ -236,9 +243,9 @@ export default function SeedreamSandbox() {
         setStepMessage('');
     };
 
-    const toggleFavorite = (index: number) => {
-        setCampaignCards(prev => prev.map((card, idx) =>
-            idx === index ? { ...card, isFavorite: !card.isFavorite } : card
+    const toggleFavorite = (id: string) => {
+        setCampaignCards(prev => prev.map((card) =>
+            card.id === id ? { ...card, isFavorite: !card.isFavorite } : card
         ));
     };
 
@@ -483,14 +490,9 @@ export default function SeedreamSandbox() {
                     <button
                         className="primary"
                         onClick={runCampaign}
-                        disabled={isRunning}
                         style={{ marginTop: '12px', padding: '20px', fontSize: '1.05rem' }}
                     >
-                        {isRunning ? (
-                            <><Loader2 className="loader" size={22} style={{ marginRight: '10px', display: 'inline' }} /> {stepMessage || 'Running…'}</>
-                        ) : (
-                            <><Sparkles size={22} style={{ marginRight: '10px', display: 'inline' }} /> Generate Campaign</>
-                        )}
+                        <><Sparkles size={22} style={{ marginRight: '10px', display: 'inline' }} /> Generate Campaign</>
                     </button>
 
                     {/* Step progress indicator */}
@@ -557,8 +559,8 @@ export default function SeedreamSandbox() {
                                 </button>
                             </div>
                             <div className="ad-grid">
-                                {campaignCards.filter(c => filterPersona === 'All' || c.persona === filterPersona).map((card, i) => (
-                                    <div key={i} className={`ad-card ${card.status}`}>
+                                {campaignCards.filter(c => filterPersona === 'All' || c.persona === filterPersona).map((card) => (
+                                    <div key={card.id} className={`ad-card ${card.status}`}>
                                         {/* Image area */}
                                         <div className="ad-image-area">
                                             {card.status === 'generating' && (
@@ -590,7 +592,7 @@ export default function SeedreamSandbox() {
                                                 <span className="ad-persona-badge">{card.persona}</span>
                                                 {card.status === 'done' && (
                                                     <button
-                                                        onClick={() => toggleFavorite(i)}
+                                                        onClick={() => toggleFavorite(card.id)}
                                                         style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                                                     >
                                                         <Heart
