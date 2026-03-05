@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Upload, Loader2, Sparkles, Image as ImageIcon, X, LayoutTemplate, ChevronDown, ChevronUp, Layers, Target, CheckCircle2, Circle, AlertCircle } from "lucide-react";
+import { Upload, Loader2, Sparkles, Image as ImageIcon, X, LayoutTemplate, ChevronDown, ChevronUp, Layers, Target, CheckCircle2, Circle, AlertCircle, Heart, Download } from "lucide-react";
 import Link from "next/link";
 
 interface Persona {
@@ -16,6 +16,7 @@ interface CampaignCard {
     adCopy: string;
     imageUrl: string | null;
     status: 'pending' | 'generating' | 'done' | 'error';
+    isFavorite?: boolean;
     errorMsg?: string;
 }
 
@@ -214,6 +215,41 @@ export default function SeedreamSandbox() {
         setStepMessage('');
     };
 
+    const toggleFavorite = (index: number) => {
+        setCampaignCards(prev => prev.map((card, idx) =>
+            idx === index ? { ...card, isFavorite: !card.isFavorite } : card
+        ));
+    };
+
+    const downloadImage = async (url: string, filename: string) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (e) {
+            console.error("Download failed", e);
+        }
+    };
+
+    const downloadAll = () => {
+        campaignCards.filter(c => c.imageUrl && c.status === 'done').forEach((c, i) => {
+            if (c.imageUrl) downloadImage(c.imageUrl, `ad-${c.persona.toLowerCase().replace(/\s+/g, '-')}-${i}.jpg`);
+        });
+    };
+
+    const downloadFavorites = () => {
+        campaignCards.filter(c => c.imageUrl && c.status === 'done' && c.isFavorite).forEach((c, i) => {
+            if (c.imageUrl) downloadImage(c.imageUrl, `ad-fav-${c.persona.toLowerCase().replace(/\s+/g, '-')}-${i}.jpg`);
+        });
+    };
+
     const toggleSection = (s: string) => setExpandedSection(expandedSection === s ? null : s);
     const isRunning = genStep !== 'idle' && genStep !== 'done';
 
@@ -231,10 +267,28 @@ export default function SeedreamSandbox() {
                     <h1>Campaign Builder</h1>
                     <p className="subtitle">AI-powered ad generation, persona by persona</p>
                 </div>
-                <Link href="/brand-kit" className="nav-button">
-                    <LayoutTemplate size={18} />
-                    Brand Kit
-                </Link>
+                <div className="download-group">
+                    {campaignCards.length > 0 && (
+                        <>
+                            <button className="btn-action" onClick={downloadAll}>
+                                <Download size={16} />
+                                Download All
+                            </button>
+                            <button
+                                className="btn-action"
+                                onClick={downloadFavorites}
+                                disabled={!campaignCards.some(c => c.isFavorite)}
+                            >
+                                <Heart size={16} fill={campaignCards.some(c => c.isFavorite) ? "#ff2d55" : "none"} color={campaignCards.some(c => c.isFavorite) ? "#ff2d55" : "currentColor"} />
+                                Download Favourites
+                            </button>
+                        </>
+                    )}
+                    <Link href="/brand-kit" className="nav-button">
+                        <LayoutTemplate size={18} />
+                        Brand Kit
+                    </Link>
+                </div>
             </header>
 
             <div className="campaign-layout">
@@ -450,7 +504,19 @@ export default function SeedreamSandbox() {
                                     <div className="ad-meta">
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                                             <span className="ad-persona-badge">{card.persona}</span>
-                                            {card.status === 'done' && <CheckCircle2 size={16} style={{ color: '#30d158' }} />}
+                                            {card.status === 'done' && (
+                                                <button
+                                                    onClick={() => toggleFavorite(i)}
+                                                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                >
+                                                    <Heart
+                                                        size={20}
+                                                        fill={card.isFavorite ? "#ff2d55" : "none"}
+                                                        color={card.isFavorite ? "#ff2d55" : "#ccc"}
+                                                        style={{ transition: 'all 0.2s ease' }}
+                                                    />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -658,6 +724,41 @@ export default function SeedreamSandbox() {
           justify-content: center;
           box-shadow: 0 2px 6px rgba(0,0,0,0.12);
           z-index: 10;
+        }
+        .download-group {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+        }
+        .btn-action {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: #fff;
+          border: 1px solid #e5e5e5;
+          padding: 8px 16px;
+          border-radius: 100px;
+          font-size: 0.85rem;
+          font-weight: 500;
+          color: #333;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .btn-action:hover:not(:disabled) {
+          background: #fdfdfd;
+          border-color: #d1d1d1;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .btn-action:active:not(:disabled) {
+          transform: translateY(0);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .btn-action:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          background: #fafafa;
         }
       `}</style>
         </main>
