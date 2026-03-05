@@ -365,7 +365,6 @@ export default function SeedreamSandbox() {
         >
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ textAlign: 'left' }}>
-                    <span className="badge">Nano Banana Pro (Omni)</span>
                     <h1>Campaign Builder</h1>
                     <p className="subtitle">AI-powered ad generation, persona by persona</p>
                 </div>
