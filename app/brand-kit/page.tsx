@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Users, Send, ArrowLeft, Plus, X } from "lucide-react";
 import Link from "next/link";
 
@@ -12,19 +12,18 @@ interface CustomerProfile {
 }
 
 export default function BrandKit() {
-    const [customerPrompt, setCustomerPrompt] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('brand_kit_prompt') || '';
+    const [customerPrompt, setCustomerPrompt] = useState('');
+    const [profiles, setProfiles] = useState<CustomerProfile[]>([]);
+
+    useEffect(() => {
+        setCustomerPrompt(localStorage.getItem('brand_kit_prompt') || '');
+        const savedProfiles = localStorage.getItem('active_personas');
+        if (savedProfiles) {
+            try {
+                setProfiles(JSON.parse(savedProfiles));
+            } catch (e) { }
         }
-        return '';
-    });
-    const [profiles, setProfiles] = useState<CustomerProfile[]>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('active_personas');
-            return saved ? JSON.parse(saved) : [];
-        }
-        return [];
-    });
+    }, []);
     const [isProfiling, setIsProfiling] = useState(false);
     const [profileError, setProfileError] = useState<string | null>(null);
 

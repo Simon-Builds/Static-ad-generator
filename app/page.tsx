@@ -24,14 +24,8 @@ type GenStep = 'idle' | 'generating' | 'done';
 
 export default function SeedreamSandbox() {
     // Image inputs
-    const [competitorImage, setCompetitorImage] = useState<string | null>(() => {
-        if (typeof window !== 'undefined') return localStorage.getItem('competitor_image');
-        return null;
-    });
-    const [productImage, setProductImage] = useState<string | null>(() => {
-        if (typeof window !== 'undefined') return localStorage.getItem('product_image');
-        return null;
-    });
+    const [competitorImage, setCompetitorImage] = useState<string | null>(null);
+    const [productImage, setProductImage] = useState<string | null>(null);
     const competitorInputRef = useRef<HTMLInputElement>(null);
     const productInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,14 +44,19 @@ export default function SeedreamSandbox() {
     // Generation state
     const [genStep, setGenStep] = useState<GenStep>('idle');
     const [stepMessage, setStepMessage] = useState('');
-    const [campaignCards, setCampaignCards] = useState<CampaignCard[]>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('campaign_cards');
-            return saved ? JSON.parse(saved) : [];
-        }
-        return [];
-    });
+    const [campaignCards, setCampaignCards] = useState<CampaignCard[]>([]);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setCompetitorImage(localStorage.getItem('competitor_image'));
+        setProductImage(localStorage.getItem('product_image'));
+        const savedCards = localStorage.getItem('campaign_cards');
+        if (savedCards) {
+            try {
+                setCampaignCards(JSON.parse(savedCards));
+            } catch (e) { }
+        }
+    }, []);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -203,14 +202,18 @@ export default function SeedreamSandbox() {
         setCampaignCards(prev => [...initialCards, ...prev]);
         setGenStep('generating');
 
-        // ── Step 1: Generate images one by one directly using Nano Banana ──────
-        for (let i = 0; i < selectedPersonaObjects.length; i++) {
-            const p = selectedPersonaObjects[i];
-            setStepMessage(`Generating image ${i + 1} of ${selectedPersonaObjects.length} — ${p.archetype}...`);
+        // ── Step 1: Generate images in parallel directly using Nano Banana ──────
+        setStepMessage(`Generating ${selectedPersonaObjects.length} images in parallel...`);
 
-            setCampaignCards(prev => prev.map((card, idx) =>
-                idx === i ? { ...card, status: 'generating' } : card
-            ));
+        setCampaignCards(prev => prev.map((card, idx) =>
+            idx < selectedPersonaObjects.length ? { ...card, status: 'generating' } : card
+        ));
+
+        await Promise.all(selectedPersonaObjects.map(async (p, i) => {
+            // Stagger requests by 500ms to allow smooth parallel generation
+            if (i > 0) {
+                await new Promise(resolve => setTimeout(resolve, i * 500));
+            }
 
             try {
                 const imageUrl = await generateSingleImage(p, productDescription, productImage, competitorImage);
@@ -222,7 +225,7 @@ export default function SeedreamSandbox() {
                     idx === i ? { ...card, status: 'error', errorMsg: err.message } : card
                 ));
             }
-        }
+        }));
 
         setGenStep('done');
         setStepMessage('');
@@ -548,10 +551,11 @@ export default function SeedreamSandbox() {
                                                         style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                                                     >
                                                         <Heart
+                                                            className={`heart-icon ${card.isFavorite ? 'active' : ''}`}
                                                             size={20}
                                                             fill={card.isFavorite ? "#ff2d55" : "none"}
                                                             color={card.isFavorite ? "#ff2d55" : "#ccc"}
-                                                            style={{ transition: 'all 0.2s ease' }}
+                                                            style={{ transition: 'color 0.2s ease, fill 0.2s ease' }}
                                                         />
                                                     </button>
                                                 )}
@@ -822,6 +826,14 @@ export default function SeedreamSandbox() {
           opacity: 0.5;
           cursor: not-allowed;
           background: #fafafa;
+        }
+        @keyframes heart-pop {
+          0% { transform: scale(1); }
+          40% { transform: scale(1.35); }
+          100% { transform: scale(1); }
+        }
+        .heart-icon.active {
+          animation: heart-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
       `}</style>
         </main>
