@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Upload, Loader2, Sparkles, Image as ImageIcon, X, LayoutTemplate, ChevronDown, ChevronUp, Layers, Target, CheckCircle2, Circle, AlertCircle, Heart, Download } from "lucide-react";
+import { Upload, Loader2, Sparkles, Image as ImageIcon, X, LayoutTemplate, ChevronDown, ChevronUp, Layers, Target, CheckCircle2, Circle, AlertCircle, Heart, Download, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 interface Persona {
@@ -190,16 +190,17 @@ export default function SeedreamSandbox() {
         const selectedPersonaObjects = personas.filter(p => selectedPersonas.has(p.archetype));
 
         setError(null);
-        setCampaignCards([]);
 
-        // Initialize cards in pending state
+        // Initialize new cards in pending state
         const initialCards: CampaignCard[] = selectedPersonaObjects.map((p) => ({
             persona: p.archetype,
             adCopy: "AI generating copy natively...",
             imageUrl: null,
             status: 'pending' as const,
         }));
-        setCampaignCards(initialCards);
+
+        // Prepend new cards to the existing list so they appear at the top
+        setCampaignCards(prev => [...initialCards, ...prev]);
         setGenStep('generating');
 
         // ── Step 1: Generate images one by one directly using Nano Banana ──────
@@ -498,55 +499,67 @@ export default function SeedreamSandbox() {
                     )}
 
                     {campaignCards.length > 0 && (
-                        <div className="ad-grid">
-                            {campaignCards.map((card, i) => (
-                                <div key={i} className={`ad-card ${card.status}`}>
-                                    {/* Image area */}
-                                    <div className="ad-image-area">
-                                        {card.status === 'generating' && (
-                                            <div className="ad-generating">
-                                                <Loader2 size={32} className="loader" style={{ color: '#ccc' }} />
-                                                <p style={{ marginTop: '12px', color: '#aaa', fontSize: '0.8rem' }}>Generating…</p>
-                                            </div>
-                                        )}
-                                        {card.status === 'pending' && (
-                                            <div className="ad-generating">
-                                                <Circle size={28} style={{ color: '#ddd' }} />
-                                                <p style={{ marginTop: '12px', color: '#ccc', fontSize: '0.8rem' }}>Queued</p>
-                                            </div>
-                                        )}
-                                        {card.status === 'error' && (
-                                            <div className="ad-generating">
-                                                <AlertCircle size={28} style={{ color: '#ff3b30' }} />
-                                                <p style={{ marginTop: '12px', color: '#ff3b30', fontSize: '0.8rem' }}>{card.errorMsg}</p>
-                                            </div>
-                                        )}
-                                        {card.status === 'done' && card.imageUrl && (
-                                            <img src={card.imageUrl} alt={card.persona} />
-                                        )}
-                                    </div>
-
-                                    {/* Card metadata */}
-                                    <div className="ad-meta">
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                            <span className="ad-persona-badge">{card.persona}</span>
-                                            {card.status === 'done' && (
-                                                <button
-                                                    onClick={() => toggleFavorite(i)}
-                                                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                                >
-                                                    <Heart
-                                                        size={20}
-                                                        fill={card.isFavorite ? "#ff2d55" : "none"}
-                                                        color={card.isFavorite ? "#ff2d55" : "#ccc"}
-                                                        style={{ transition: 'all 0.2s ease' }}
-                                                    />
-                                                </button>
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+                                <button
+                                    className="btn-action"
+                                    style={{ color: '#ff3b30', borderColor: '#ffd6d6', background: '#fff9f9' }}
+                                    onClick={() => { setCampaignCards([]); setGenStep('idle'); setStepMessage(''); }}
+                                >
+                                    <Trash2 size={16} />
+                                    Clear All
+                                </button>
+                            </div>
+                            <div className="ad-grid">
+                                {campaignCards.map((card, i) => (
+                                    <div key={i} className={`ad-card ${card.status}`}>
+                                        {/* Image area */}
+                                        <div className="ad-image-area">
+                                            {card.status === 'generating' && (
+                                                <div className="ad-generating">
+                                                    <Loader2 size={32} className="loader" style={{ color: '#ccc' }} />
+                                                    <p style={{ marginTop: '12px', color: '#aaa', fontSize: '0.8rem' }}>Generating…</p>
+                                                </div>
+                                            )}
+                                            {card.status === 'pending' && (
+                                                <div className="ad-generating">
+                                                    <Circle size={28} style={{ color: '#ddd' }} />
+                                                    <p style={{ marginTop: '12px', color: '#ccc', fontSize: '0.8rem' }}>Queued</p>
+                                                </div>
+                                            )}
+                                            {card.status === 'error' && (
+                                                <div className="ad-generating">
+                                                    <AlertCircle size={28} style={{ color: '#ff3b30' }} />
+                                                    <p style={{ marginTop: '12px', color: '#ff3b30', fontSize: '0.8rem' }}>{card.errorMsg}</p>
+                                                </div>
+                                            )}
+                                            {card.status === 'done' && card.imageUrl && (
+                                                <img src={card.imageUrl} alt={card.persona} />
                                             )}
                                         </div>
+
+                                        {/* Card metadata */}
+                                        <div className="ad-meta">
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                <span className="ad-persona-badge">{card.persona}</span>
+                                                {card.status === 'done' && (
+                                                    <button
+                                                        onClick={() => toggleFavorite(i)}
+                                                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                    >
+                                                        <Heart
+                                                            size={20}
+                                                            fill={card.isFavorite ? "#ff2d55" : "none"}
+                                                            color={card.isFavorite ? "#ff2d55" : "#ccc"}
+                                                            style={{ transition: 'all 0.2s ease' }}
+                                                        />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
