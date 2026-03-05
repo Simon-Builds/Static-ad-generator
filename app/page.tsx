@@ -45,6 +45,8 @@ export default function SeedreamSandbox() {
     const [aspectRatio, setAspectRatio] = useState<string>("1:1");
     const [volume, setVolume] = useState<number>(1);
     const [adherence, setAdherence] = useState<'High' | 'Medium' | 'Low'>('High');
+    const [cta, setCta] = useState<string>('');
+    const [specialSale, setSpecialSale] = useState<string>('');
 
     // Generation state
     const [genStep, setGenStep] = useState<GenStep>('idle');
@@ -78,6 +80,10 @@ export default function SeedreamSandbox() {
         if (savedRatio) setAspectRatio(savedRatio);
         const savedVolume = localStorage.getItem('campaign_volume');
         if (savedVolume) setVolume(Number(savedVolume));
+        const savedCta = localStorage.getItem('campaign_cta');
+        if (savedCta) setCta(savedCta);
+        const savedSale = localStorage.getItem('campaign_special_sale');
+        if (savedSale) setSpecialSale(savedSale);
         const savedAdherence = localStorage.getItem('campaign_adherence') as 'High' | 'Medium' | 'Low' | null;
         if (savedAdherence) setAdherence(savedAdherence);
 
@@ -118,7 +124,9 @@ export default function SeedreamSandbox() {
         localStorage.setItem('campaign_aspect_ratio', aspectRatio);
         localStorage.setItem('campaign_volume', String(volume));
         localStorage.setItem('campaign_adherence', adherence);
-    }, [campaignName, aspectRatio, volume, adherence, isInitialized]);
+        localStorage.setItem('campaign_cta', cta);
+        localStorage.setItem('campaign_special_sale', specialSale);
+    }, [campaignName, aspectRatio, volume, adherence, cta, specialSale, isInitialized]);
 
     const togglePersona = (archetype: string) => {
         setSelectedPersonas(prev => {
@@ -174,6 +182,8 @@ export default function SeedreamSandbox() {
             `Product description: "${productDesc}".`,
             `Target audience: ${persona.archetype}. Pain: "${persona.pain}". Angle: "${persona.angle}". Emotion: "${persona.emotion}".`,
             `Analyze the product and persona. Write short, punchy ad copy tailored exactly to their core pain and emotion.`,
+            cta.trim() ? `Include this call-to-action prominently in the ad: "${cta.trim()}".` : '',
+            specialSale.trim() ? `Feature this special sale/offer prominently on the ad: "${specialSale.trim()}".` : '',
             `Render that ad copy prominently and legibly onto the ad design.`,
             'Ensure perfect spelling, sharp typography, and photorealistic 2K rendering.',
         ].filter(Boolean).join(' ');
@@ -208,14 +218,24 @@ export default function SeedreamSandbox() {
             setError("Please select at least one persona in Campaign Brief.");
             return;
         }
+        if (volume < selectedPersonas.size) {
+            setError(`Volume (${volume}) cannot be lower than the number of selected personas (${selectedPersonas.size}).`);
+            return;
+        }
 
         const productDescription = typeof window !== 'undefined' ? localStorage.getItem('brand_kit_prompt') || '' : '';
         const selectedPersonaObjects = personas.filter(p => selectedPersonas.has(p.archetype));
 
+        // Build round-robin persona list based on volume
+        const roundRobinPersonas: Persona[] = [];
+        for (let i = 0; i < volume; i++) {
+            roundRobinPersonas.push(selectedPersonaObjects[i % selectedPersonaObjects.length]);
+        }
+
         setError(null);
 
-        // Initialize new cards in pending state
-        const initialCards: CampaignCard[] = selectedPersonaObjects.map((p) => ({
+        // Initialize new cards in pending state — one per volume slot
+        const initialCards: CampaignCard[] = roundRobinPersonas.map((p) => ({
             id: Math.random().toString(36).substring(2, 11),
             persona: p.archetype,
             adCopy: "AI generating copy natively...",
@@ -228,14 +248,14 @@ export default function SeedreamSandbox() {
         setGenStep('generating');
         setFilterPersona('All');
 
-        // ── Step 1: Generate images in parallel directly using Nano Banana ──────
-        setStepMessage(`Generating ${selectedPersonaObjects.length} images in parallel...`);
+        // ── Generate images in parallel using round-robin persona distribution ──────
+        setStepMessage(`Generating ${roundRobinPersonas.length} images in parallel...`);
 
         setCampaignCards(prev => prev.map((card) =>
             initialCards.some(ic => ic.id === card.id) ? { ...card, status: 'generating' } : card
         ));
 
-        await Promise.all(selectedPersonaObjects.map(async (p, i) => {
+        await Promise.all(roundRobinPersonas.map(async (p, i) => {
             const cardId = initialCards[i].id;
             // Stagger requests by 500ms to allow smooth parallel generation
             if (i > 0) {
@@ -442,6 +462,30 @@ export default function SeedreamSandbox() {
                                         </div>
                                     )}
                                 </div>
+                                <div className="form-group" style={{ marginTop: '14px' }}>
+                                    <label>CTA <span style={{ color: '#aaa', fontWeight: 400 }}>(Optional)</span></label>
+                                    <input
+                                        type="text"
+                                        className="select-input"
+                                        placeholder="e.g. Shop Now, Learn More, Get Started"
+                                        value={cta}
+                                        onChange={(e) => setCta(e.target.value)}
+                                        style={{ marginTop: '0' }}
+                                    />
+                                    <p style={{ fontSize: '0.72rem', color: '#aaa', marginTop: '4px' }}>A call-to-action to display on the generated ads.</p>
+                                </div>
+                                <div className="form-group" style={{ marginTop: '14px' }}>
+                                    <label>Special Sale <span style={{ color: '#aaa', fontWeight: 400 }}>(Optional)</span></label>
+                                    <input
+                                        type="text"
+                                        className="select-input"
+                                        placeholder="e.g. 50% Off Today, Buy 1 Get 1 Free"
+                                        value={specialSale}
+                                        onChange={(e) => setSpecialSale(e.target.value)}
+                                        style={{ marginTop: '0' }}
+                                    />
+                                    <p style={{ fontSize: '0.72rem', color: '#aaa', marginTop: '4px' }}>A promotion or discount to highlight on the ads.</p>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -476,9 +520,10 @@ export default function SeedreamSandbox() {
                                             type="number"
                                             className="select-input"
                                             min="1"
-                                            max="10"
+                                            max="50"
                                             value={volume}
-                                            onChange={(e) => setVolume(Number(e.target.value))}
+                                            onChange={(e) => setVolume(e.target.value === '' ? '' as any : Number(e.target.value))}
+                                            onBlur={() => { if (!volume || volume < 1) setVolume(1); }}
                                         />
                                     </div>
                                     <div className="form-group">
@@ -504,9 +549,12 @@ export default function SeedreamSandbox() {
                                         ))}
                                     </div>
                                 </div>
-                                <p style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '14px' }}>
-                                    One image is generated per selected persona.
-                                    {selectedPersonas.size > 0 && ` ${selectedPersonas.size} image${selectedPersonas.size > 1 ? 's' : ''} will be generated.`}
+                                <p style={{ fontSize: '0.75rem', color: selectedPersonas.size > 0 && volume < selectedPersonas.size ? '#ff3b30' : '#aaa', marginTop: '14px' }}>
+                                    {selectedPersonas.size > 0 ? (
+                                        volume < selectedPersonas.size
+                                            ? `⚠ Volume (${volume}) must be at least ${selectedPersonas.size} (number of selected personas).`
+                                            : `${volume} image${volume > 1 ? 's' : ''} will be generated — ${Math.floor(volume / selectedPersonas.size)} per persona${volume % selectedPersonas.size > 0 ? `, +${volume % selectedPersonas.size} extra` : ''}.`
+                                    ) : 'Select personas and set volume to configure generation.'}
                                 </p>
                             </div>
                         )}
