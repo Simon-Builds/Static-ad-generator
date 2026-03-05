@@ -51,6 +51,7 @@ export default function SeedreamSandbox() {
     const [campaignCards, setCampaignCards] = useState<CampaignCard[]>([]);
     const [filterPersona, setFilterPersona] = useState<string>('All');
     const [expandedImage, setExpandedImage] = useState<string | null>(null);
+    const [cardToDelete, setCardToDelete] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -248,6 +249,13 @@ export default function SeedreamSandbox() {
         setCampaignCards(prev => prev.map((card) =>
             card.id === id ? { ...card, isFavorite: !card.isFavorite } : card
         ));
+    };
+
+    const confirmDelete = () => {
+        if (cardToDelete) {
+            setCampaignCards(prev => prev.filter(card => card.id !== cardToDelete));
+            setCardToDelete(null);
+        }
     };
 
     const downloadZip = async (cardsToDownload: CampaignCard[], suffix: string) => {
@@ -563,7 +571,7 @@ export default function SeedreamSandbox() {
                                 {campaignCards.filter(c => filterPersona === 'All' || c.persona === filterPersona).map((card) => (
                                     <div key={card.id} className={`ad-card ${card.status}`}>
                                         {/* Image area */}
-                                        <div className="ad-image-area">
+                                        <div className="ad-image-area" style={{ position: 'relative' }}>
                                             {card.status === 'generating' && (
                                                 <div className="ad-generating">
                                                     <Loader2 size={32} className="loader" style={{ color: '#ccc' }} />
@@ -594,6 +602,15 @@ export default function SeedreamSandbox() {
                                                     </div>
                                                 </div>
                                             )}
+                                            {card.status === 'done' && (
+                                                <button
+                                                    className="ad-delete-btn"
+                                                    onClick={(e) => { e.stopPropagation(); setCardToDelete(card.id); }}
+                                                    title="Delete Ad"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
                                         </div>
 
                                         {/* Card metadata */}
@@ -601,18 +618,21 @@ export default function SeedreamSandbox() {
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                                                 <span className="ad-persona-badge">{card.persona}</span>
                                                 {card.status === 'done' && (
-                                                    <button
-                                                        onClick={() => toggleFavorite(card.id)}
-                                                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                                    >
-                                                        <Heart
-                                                            className={`heart-icon ${card.isFavorite ? 'active' : ''}`}
-                                                            size={20}
-                                                            fill={card.isFavorite ? "#ff2d55" : "none"}
-                                                            color={card.isFavorite ? "#ff2d55" : "#ccc"}
-                                                            style={{ transition: 'color 0.2s ease, fill 0.2s ease' }}
-                                                        />
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                        <button
+                                                            onClick={() => toggleFavorite(card.id)}
+                                                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                            title="Favorite"
+                                                        >
+                                                            <Heart
+                                                                className={`heart-icon ${card.isFavorite ? 'active' : ''}`}
+                                                                size={20}
+                                                                fill={card.isFavorite ? "#ff2d55" : "none"}
+                                                                color={card.isFavorite ? "#ff2d55" : "#ccc"}
+                                                                style={{ transition: 'color 0.2s ease, fill 0.2s ease' }}
+                                                            />
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -632,6 +652,20 @@ export default function SeedreamSandbox() {
                             <X size={24} color="white" />
                         </button>
                         <img src={expandedImage} alt="Expanded Ad" />
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {cardToDelete && (
+                <div className="delete-modal-overlay" onClick={() => setCardToDelete(null)}>
+                    <div className="delete-modal-content" onClick={e => e.stopPropagation()}>
+                        <h3 style={{ margin: '0 0 12px 0', fontSize: '1.2rem', color: '#111' }}>Delete Ad</h3>
+                        <p style={{ margin: '0 0 24px 0', color: '#555', fontSize: '0.95rem' }}>Are you sure you want to delete this ad?</p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button className="secondary" onClick={() => setCardToDelete(null)} style={{ padding: '8px 16px', border: 'none', background: '#f0f0f0', borderRadius: '6px', cursor: 'pointer', fontWeight: 500, color: '#333' }}>Cancel</button>
+                            <button className="primary" onClick={confirmDelete} style={{ padding: '8px 16px', border: 'none', background: '#ff3b30', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}>Delete</button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -737,6 +771,34 @@ export default function SeedreamSandbox() {
           line-height: 1.4;
         }
 
+        .ad-delete-btn {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: rgba(255, 255, 255, 0.9);
+          border: none;
+          color: #ff3b30;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          opacity: 0;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          z-index: 10;
+        }
+        .ad-card:hover .ad-delete-btn {
+          opacity: 1;
+        }
+        .ad-delete-btn:hover {
+          background: #ff3b30;
+          color: white;
+          transform: scale(1.1);
+        }
+
         .ad-image-wrapper {
           overflow: hidden;
         }
@@ -808,6 +870,37 @@ export default function SeedreamSandbox() {
         .close-modal-btn:hover {
           background: rgba(255, 255, 255, 0.2);
           transform: scale(1.05);
+        }
+
+        /* Delete Modal */
+        .delete-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          animation: fade-in 0.15s ease-out;
+          backdrop-filter: blur(2px);
+        }
+        .delete-modal-content {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          width: 100%;
+          max-width: 360px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+          animation: slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slide-up {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes fade-in {
