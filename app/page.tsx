@@ -5,6 +5,7 @@ import { Upload, Loader2, Sparkles, Image as ImageIcon, X, LayoutTemplate, Chevr
 import Link from "next/link";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Persona {
     archetype: string;
@@ -53,10 +54,13 @@ export default function SeedreamSandbox() {
     const [expandedImage, setExpandedImage] = useState<string | null>(null);
     const [cardToDelete, setCardToDelete] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isInitialized, setIsInitialized] = useState(false);
 
     useEffect(() => {
+        // Load everything from localStorage once on mount
         setCompetitorImage(localStorage.getItem('competitor_image'));
         setProductImage(localStorage.getItem('product_image'));
+
         const savedCards = localStorage.getItem('campaign_cards');
         if (savedCards) {
             try {
@@ -67,45 +71,54 @@ export default function SeedreamSandbox() {
                 setCampaignCards(parsed);
             } catch (e) { }
         }
+
+        const savedName = localStorage.getItem('campaign_name');
+        if (savedName) setCampaignName(savedName);
+        const savedRatio = localStorage.getItem('campaign_aspect_ratio');
+        if (savedRatio) setAspectRatio(savedRatio);
+        const savedVolume = localStorage.getItem('campaign_volume');
+        if (savedVolume) setVolume(Number(savedVolume));
+        const savedAdherence = localStorage.getItem('campaign_adherence') as 'High' | 'Medium' | 'Low' | null;
+        if (savedAdherence) setAdherence(savedAdherence);
+
+        const savedPersonas = localStorage.getItem("active_personas");
+        if (savedPersonas) {
+            try {
+                const parsed = JSON.parse(savedPersonas);
+                setPersonas(parsed);
+                setSelectedPersonas(new Set(parsed.map((p: Persona) => p.archetype)));
+            } catch (e) { }
+        }
+
+        setIsInitialized(true);
     }, []);
 
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            const saved = localStorage.getItem("active_personas");
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    setPersonas(parsed);
-                    // Only set selected if not already set or if fresh load
-                    setSelectedPersonas(new Set(parsed.map((p: Persona) => p.archetype)));
-                } catch (e) {
-                    console.error("Failed to parse personas", e);
-                }
-            }
-        }
-    }, []);
-
-    // Persist images
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            if (competitorImage) localStorage.setItem('competitor_image', competitorImage);
-            else localStorage.removeItem('competitor_image');
-        }
-    }, [competitorImage]);
+    // ──────────────── Persistence Effects (Only save after initialization) ────────────────
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            if (productImage) localStorage.setItem('product_image', productImage);
-            else localStorage.removeItem('product_image');
-        }
-    }, [productImage]);
+        if (!isInitialized) return;
+        if (competitorImage) localStorage.setItem('competitor_image', competitorImage);
+        else localStorage.removeItem('competitor_image');
+    }, [competitorImage, isInitialized]);
 
-    // Persist campaign results
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('campaign_cards', JSON.stringify(campaignCards));
-        }
-    }, [campaignCards]);
+        if (!isInitialized) return;
+        if (productImage) localStorage.setItem('product_image', productImage);
+        else localStorage.removeItem('product_image');
+    }, [productImage, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem('campaign_cards', JSON.stringify(campaignCards));
+    }, [campaignCards, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem('campaign_name', campaignName);
+        localStorage.setItem('campaign_aspect_ratio', aspectRatio);
+        localStorage.setItem('campaign_volume', String(volume));
+        localStorage.setItem('campaign_adherence', adherence);
+    }, [campaignName, aspectRatio, volume, adherence, isInitialized]);
 
     const togglePersona = (archetype: string) => {
         setSelectedPersonas(prev => {
@@ -306,7 +319,11 @@ export default function SeedreamSandbox() {
     };
 
     return (
-        <main>
+        <motion.main
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        >
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ textAlign: 'left' }}>
                     <span className="badge">Nano Banana Pro (Omni)</span>
@@ -568,76 +585,86 @@ export default function SeedreamSandbox() {
                                 </button>
                             </div>
                             <div className="ad-grid">
-                                {campaignCards.filter(c => filterPersona === 'All' || c.persona === filterPersona).map((card) => (
-                                    <div key={card.id} className={`ad-card ${card.status}`}>
-                                        {/* Image area */}
-                                        <div className="ad-image-area" style={{ position: 'relative' }}>
-                                            {card.status === 'generating' && (
-                                                <div className="ad-generating">
-                                                    <Loader2 size={32} className="loader" style={{ color: '#ccc' }} />
-                                                    <p style={{ marginTop: '12px', color: '#aaa', fontSize: '0.8rem' }}>Generating…</p>
-                                                </div>
-                                            )}
-                                            {card.status === 'pending' && (
-                                                <div className="ad-generating">
-                                                    <Circle size={28} style={{ color: '#ddd' }} />
-                                                    <p style={{ marginTop: '12px', color: '#ccc', fontSize: '0.8rem' }}>Queued</p>
-                                                </div>
-                                            )}
-                                            {card.status === 'error' && (
-                                                <div className="ad-generating">
-                                                    <AlertCircle size={28} style={{ color: '#ff3b30' }} />
-                                                    <p style={{ marginTop: '12px', color: '#ff3b30', fontSize: '0.8rem' }}>{card.errorMsg}</p>
-                                                </div>
-                                            )}
-                                            {card.status === 'done' && card.imageUrl && (
-                                                <div
-                                                    style={{ position: 'relative', cursor: 'zoom-in', width: '100%', height: '100%' }}
-                                                    onClick={() => setExpandedImage(card.imageUrl)}
-                                                    className="ad-image-wrapper"
-                                                >
-                                                    <img src={card.imageUrl} alt={card.persona} />
-                                                    <div className="expand-overlay">
-                                                        <span>Click to expand</span>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {card.status === 'done' && (
-                                                <button
-                                                    className="ad-delete-btn"
-                                                    onClick={(e) => { e.stopPropagation(); setCardToDelete(card.id); }}
-                                                    title="Delete Ad"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* Card metadata */}
-                                        <div className="ad-meta">
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                                <span className="ad-persona-badge">{card.persona}</span>
-                                                {card.status === 'done' && (
-                                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                                        <button
-                                                            onClick={() => toggleFavorite(card.id)}
-                                                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                                            title="Favorite"
-                                                        >
-                                                            <Heart
-                                                                className={`heart-icon ${card.isFavorite ? 'active' : ''}`}
-                                                                size={20}
-                                                                fill={card.isFavorite ? "#ff2d55" : "none"}
-                                                                color={card.isFavorite ? "#ff2d55" : "#ccc"}
-                                                                style={{ transition: 'color 0.2s ease, fill 0.2s ease' }}
-                                                            />
-                                                        </button>
+                                <AnimatePresence>
+                                    {campaignCards.filter(c => filterPersona === 'All' || c.persona === filterPersona).map((card) => (
+                                        <motion.div
+                                            key={card.id}
+                                            layout
+                                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                            className={`ad-card ${card.status}`}
+                                        >
+                                            {/* Image area */}
+                                            <div className="ad-image-area">
+                                                {card.status === 'generating' && (
+                                                    <div className="ad-generating skeleton" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <Loader2 size={32} className="loader" style={{ color: 'rgba(0,0,0,0.4)', zIndex: 2 }} />
                                                     </div>
                                                 )}
+                                                {card.status === 'pending' && (
+                                                    <div className="ad-generating" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <Circle size={28} style={{ color: '#ddd' }} />
+                                                        <p style={{ marginTop: '12px', color: '#ccc', fontSize: '0.8rem' }}>Queued</p>
+                                                    </div>
+                                                )}
+                                                {card.status === 'error' && (
+                                                    <div className="ad-generating">
+                                                        <AlertCircle size={28} style={{ color: '#ff3b30' }} />
+                                                        <p style={{ marginTop: '12px', color: '#ff3b30', fontSize: '0.8rem' }}>{card.errorMsg}</p>
+                                                    </div>
+                                                )}
+                                                {card.status === 'done' && card.imageUrl && (
+                                                    <div
+                                                        style={{ position: 'relative', cursor: 'zoom-in', width: '100%', height: '100%' }}
+                                                        onClick={() => setExpandedImage(card.imageUrl)}
+                                                        className="ad-image-wrapper"
+                                                    >
+                                                        <img src={card.imageUrl} alt={card.persona} />
+                                                        <div className="expand-overlay">
+                                                            <span>Click to expand</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* Delete button — LAST child so it paints on top of everything */}
+                                                {card.status !== 'pending' && (
+                                                    <button
+                                                        className="ad-delete-btn"
+                                                        onClick={(e) => { e.stopPropagation(); setCardToDelete(card.id); }}
+                                                        title="Delete Ad"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
                                             </div>
-                                        </div>
-                                    </div>
-                                ))}
+
+                                            {/* Card metadata */}
+                                            <div className="ad-meta">
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                    <span className="ad-persona-badge">{card.persona}</span>
+                                                    {card.status === 'done' && (
+                                                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                            <button
+                                                                onClick={() => toggleFavorite(card.id)}
+                                                                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                title="Favorite"
+                                                            >
+                                                                <Heart
+                                                                    className={`heart-icon ${card.isFavorite ? 'active' : ''}`}
+                                                                    size={20}
+                                                                    fill={card.isFavorite ? "#ff2d55" : "none"}
+                                                                    color={card.isFavorite ? "#ff2d55" : "#ccc"}
+                                                                    style={{ transition: 'color 0.2s ease, fill 0.2s ease' }}
+                                                                />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
                             </div>
                         </div>
                     )}
@@ -710,6 +737,7 @@ export default function SeedreamSandbox() {
           overflow: hidden;
           box-shadow: 0 2px 12px rgba(0,0,0,0.04);
           transition: transform 0.2s, box-shadow 0.2s;
+          position: relative;
         }
         .ad-card:hover {
           transform: translateY(-3px);
@@ -721,7 +749,6 @@ export default function SeedreamSandbox() {
           width: 100%;
           aspect-ratio: 1/1;
           background: #f7f7f8;
-          overflow: hidden;
           position: relative;
           display: flex;
           align-items: center;
@@ -775,28 +802,29 @@ export default function SeedreamSandbox() {
           position: absolute;
           top: 10px;
           right: 10px;
-          background: rgba(255, 255, 255, 0.9);
+          background: rgba(255, 255, 255, 0.92);
           border: none;
           color: #ff3b30;
-          width: 32px;
-          height: 32px;
+          width: 30px;
+          height: 30px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           opacity: 0;
-          transition: all 0.2s ease;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          z-index: 10;
+          transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+          z-index: 20;
         }
-        .ad-card:hover .ad-delete-btn {
+        :global(.ad-card:hover) .ad-delete-btn {
           opacity: 1;
         }
         .ad-delete-btn:hover {
-          background: #ff3b30;
-          color: white;
-          transform: scale(1.1);
+          background: #ff3b30 !important;
+          color: white !important;
+          transform: scale(1.12);
+          box-shadow: 0 4px 14px rgba(255, 59, 48, 0.4);
         }
 
         .ad-image-wrapper {
@@ -815,6 +843,7 @@ export default function SeedreamSandbox() {
           font-weight: 500;
           font-size: 0.9rem;
           backdrop-filter: blur(2px);
+          z-index: 10;
         }
         .ad-image-wrapper:hover .expand-overlay {
           opacity: 1;
@@ -1085,6 +1114,6 @@ export default function SeedreamSandbox() {
           animation: heart-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
       `}</style>
-        </main>
+        </motion.main>
     );
 }

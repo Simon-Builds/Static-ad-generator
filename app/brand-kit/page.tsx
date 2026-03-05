@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Users, Send, ArrowLeft, Plus, X } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Plus, X } from "lucide-react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CustomerProfile {
     archetype: string;
@@ -14,6 +15,15 @@ interface CustomerProfile {
 export default function BrandKit() {
     const [customerPrompt, setCustomerPrompt] = useState('');
     const [profiles, setProfiles] = useState<CustomerProfile[]>([]);
+    const [isProfiling, setIsProfiling] = useState(false);
+    const [profileError, setProfileError] = useState<string | null>(null);
+    const [isAddingCustom, setIsAddingCustom] = useState(false);
+    const [customPersona, setCustomPersona] = useState<CustomerProfile>({
+        archetype: '',
+        pain: '',
+        angle: '',
+        emotion: ''
+    });
 
     useEffect(() => {
         setCustomerPrompt(localStorage.getItem('brand_kit_prompt') || '');
@@ -24,16 +34,6 @@ export default function BrandKit() {
             } catch (e) { }
         }
     }, []);
-    const [isProfiling, setIsProfiling] = useState(false);
-    const [profileError, setProfileError] = useState<string | null>(null);
-
-    const [isAddingCustom, setIsAddingCustom] = useState(false);
-    const [customPersona, setCustomPersona] = useState<CustomerProfile>({
-        archetype: '',
-        pain: '',
-        angle: '',
-        emotion: ''
-    });
 
     const addCustomPersona = () => {
         if (!customPersona.archetype.trim() || !customPersona.pain.trim() || !customPersona.angle.trim() || !customPersona.emotion.trim()) {
@@ -84,7 +84,11 @@ export default function BrandKit() {
     };
 
     return (
-        <main>
+        <motion.main
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        >
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
                 <div style={{ textAlign: 'left' }}>
                     <span className="badge">Groq Llama 4 Scout</span>
@@ -113,7 +117,7 @@ export default function BrandKit() {
                             style={{ minHeight: '150px' }}
                         />
                     </div>
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
                         <button
                             className="primary"
                             onClick={generateProfiles}
@@ -126,106 +130,168 @@ export default function BrandKit() {
                                 <><Send size={18} style={{ marginRight: '8px', display: 'inline' }} /> Generate 10 Profiles</>
                             )}
                         </button>
-                        <button
-                            className="secondary"
+                        <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            className="add-custom-btn"
                             onClick={() => setIsAddingCustom(!isAddingCustom)}
                             disabled={isProfiling}
-                            style={{ padding: '0 20px' }}
                         >
-                            {isAddingCustom ? <><X size={18} style={{ marginRight: '8px', display: 'inline' }} /> Cancel</> : <><Plus size={18} style={{ marginRight: '8px', display: 'inline' }} /> Add Custom Persona</>}
-                        </button>
+                            {isAddingCustom
+                                ? <><X size={18} style={{ marginRight: '8px', display: 'inline' }} /> Cancel</>
+                                : <><Plus size={18} style={{ marginRight: '8px', display: 'inline' }} /> Add Custom</>}
+                        </motion.button>
                     </div>
                     {profileError && <div className="error-message">{profileError}</div>}
                 </div>
 
-                {isAddingCustom && (
-                    <div className="card" style={{ marginBottom: '32px', background: '#fafafa', border: '1px dashed #ccc' }}>
-                        <h3 style={{ marginBottom: '16px', fontSize: '1.2rem' }}>Add Custom Persona</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                            <div className="form-group">
-                                <label>Archetype (Name)</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. The Busy Professional"
-                                    className="select-input"
-                                    value={customPersona.archetype}
-                                    onChange={(e) => setCustomPersona({ ...customPersona, archetype: e.target.value })}
-                                />
+                <AnimatePresence>
+                    {isAddingCustom && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                            animate={{ opacity: 1, height: 'auto', marginBottom: '32px' }}
+                            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                            style={{ overflow: 'hidden' }}
+                        >
+                            <div className="card custom-persona-card">
+                                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '4px' }}>✏️ Add Custom Persona</h3>
+                                <p style={{ color: 'var(--muted)', fontSize: '0.9rem', marginBottom: '8px' }}>Fill in all four fields to define a unique audience segment.</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                                    <div className="form-group">
+                                        <label>Archetype (Name)</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. The Busy Professional"
+                                            className="select-input"
+                                            value={customPersona.archetype}
+                                            onChange={(e) => setCustomPersona({ ...customPersona, archetype: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Core Emotion</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Overwhelmed but aspiring"
+                                            className="select-input"
+                                            value={customPersona.emotion}
+                                            onChange={(e) => setCustomPersona({ ...customPersona, emotion: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Pain Point</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. No time to cook healthy meals"
+                                            className="select-input"
+                                            value={customPersona.pain}
+                                            onChange={(e) => setCustomPersona({ ...customPersona, pain: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Marketing Angle</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Time-saving convenience"
+                                            className="select-input"
+                                            value={customPersona.angle}
+                                            onChange={(e) => setCustomPersona({ ...customPersona, angle: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <button className="primary" onClick={addCustomPersona}>
+                                    Add Persona
+                                </button>
                             </div>
-                            <div className="form-group">
-                                <label>Core Emotion</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. Overwhelmed but aspiring"
-                                    className="select-input"
-                                    value={customPersona.emotion}
-                                    onChange={(e) => setCustomPersona({ ...customPersona, emotion: e.target.value })}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Pain Point</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. No time to cook healthy meals"
-                                    className="select-input"
-                                    value={customPersona.pain}
-                                    onChange={(e) => setCustomPersona({ ...customPersona, pain: e.target.value })}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Marketing Angle</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. Time-saving convenience without compromise"
-                                    className="select-input"
-                                    value={customPersona.angle}
-                                    onChange={(e) => setCustomPersona({ ...customPersona, angle: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <button className="primary" onClick={addCustomPersona}>
-                            Add Persona
-                        </button>
-                    </div>
-                )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {profiles.length > 0 && (
                     <div className="profile-grid">
-                        {profiles.map((p, i) => (
-                            <div key={i} className="profile-card">
-                                <div className="name">{p.archetype}</div>
-                                <div className="meta" style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                    <span className="badge" style={{ background: '#fff0f0' }}>Pain</span>
-                                    <span className="badge" style={{ background: '#f0faff' }}>Angle</span>
-                                </div>
-                                <div className="detail" style={{ marginBottom: '12px' }}>
-                                    <strong>Pain:</strong> {p.pain}
-                                </div>
-                                <div className="detail" style={{ marginBottom: '12px' }}>
-                                    <strong>Angle:</strong> {p.angle}
-                                </div>
-                                <div className="motivation" style={{ borderTop: 'none', fontStyle: 'normal', color: '#666' }}>
-                                    <span style={{ fontWeight: '600', color: 'var(--foreground)' }}>Emotion:</span> {p.emotion}
-                                </div>
-                            </div>
-                        ))}
+                        <AnimatePresence>
+                            {profiles.map((p, i) => (
+                                <motion.div
+                                    key={p.archetype + i}
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.92, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    transition={{ type: "spring", stiffness: 300, damping: 28, delay: i * 0.04 }}
+                                    className="profile-card"
+                                >
+                                    <div className="name">{p.archetype}</div>
+                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                                        <span className="persona-tag pain-tag">Pain</span>
+                                        <span className="persona-tag angle-tag">Angle</span>
+                                        <span className="persona-tag emotion-tag">Emotion</span>
+                                    </div>
+                                    <div className="detail" style={{ marginBottom: '12px' }}>
+                                        <strong>Pain:</strong> {p.pain}
+                                    </div>
+                                    <div className="detail" style={{ marginBottom: '12px' }}>
+                                        <strong>Angle:</strong> {p.angle}
+                                    </div>
+                                    <div className="motivation">
+                                        <span style={{ fontWeight: 700 }}>Emotion:</span> {p.emotion}
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                     </div>
                 )}
             </section>
 
             <style jsx>{`
-                .select-input {
-                  width: 100%;
-                  padding: 11px 12px;
-                  border-radius: 8px;
-                  border: 1px solid #eee;
-                  background: #fff;
-                  font-size: 0.9rem;
-                  margin-top: 8px;
-                  outline: none;
+                .add-custom-btn {
+                    display: flex;
+                    align-items: center;
+                    padding: 0 22px;
+                    background: #f0f0f2;
+                    color: #333;
+                    border: 1px solid rgba(0,0,0,0.08);
+                    border-radius: 12px;
+                    font-weight: 600;
+                    font-size: 0.95rem;
+                    cursor: pointer;
+                    transition: background 0.2s;
+                    white-space: nowrap;
                 }
-                .select-input:focus { border-color: #000; }
+                .add-custom-btn:hover {
+                    background: #e5e5e8;
+                }
+                .custom-persona-card {
+                    background: rgba(94, 92, 230, 0.03);
+                    border: 1.5px dashed rgba(94, 92, 230, 0.25) !important;
+                }
+                .select-input {
+                    width: 100%;
+                    padding: 14px 16px;
+                    border-radius: 12px;
+                    border: 1px solid rgba(0,0,0,0.1);
+                    background: rgba(255,255,255,0.9);
+                    font-size: 0.95rem;
+                    margin-top: 8px;
+                    outline: none;
+                    transition: border-color 0.2s, box-shadow 0.2s;
+                    font-family: inherit;
+                }
+                .select-input:focus {
+                    border-color: #5e5ce6;
+                    box-shadow: 0 0 0 4px rgba(94, 92, 230, 0.12);
+                }
+                .persona-tag {
+                    display: inline-block;
+                    padding: 3px 10px;
+                    border-radius: 20px;
+                    font-size: 0.72rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.06em;
+                }
+                .pain-tag { background: rgba(255, 59, 48, 0.07); color: #c0392b; }
+                .angle-tag { background: rgba(0, 122, 255, 0.07); color: #2471a3; }
+                .emotion-tag { background: rgba(94, 92, 230, 0.07); color: #5e5ce6; }
             `}</style>
-        </main>
+        </motion.main>
     );
 }

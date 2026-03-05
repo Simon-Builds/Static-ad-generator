@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 
+const outfit = Outfit({ subsets: ["latin"] });
+
 export const metadata: Metadata = {
-    title: "Seedream 5 Lite Sandbox",
-    description: "Test the replicate bytedance/seedream-5-lite end point",
+    title: "Antigravity | AI Static Ad Generator",
+    description: "Generate breathtaking ad creatives in seconds.",
 };
 
 export default function RootLayout({
@@ -13,7 +16,9 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
-            <body>{children}</body>
+            <body className={outfit.className}>
+                {children}
+            </body>
         </html>
     );
 }
