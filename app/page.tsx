@@ -363,8 +363,8 @@ export default function SeedreamSandbox() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ textAlign: 'left' }}>
+            <header className="page-header">
+                <div className="header-text">
                     <h1>Campaign Builder</h1>
                     <p className="subtitle">AI-powered ad generation, persona by persona</p>
                 </div>
@@ -531,7 +531,7 @@ export default function SeedreamSandbox() {
                                     />
                                     <p style={{ fontSize: '0.75rem', color: '#aaa' }}>This will be used to name your downloaded files.</p>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                                <div className="volume-ratio-grid">
                                     <div className="form-group">
                                         <label>Volume</label>
                                         <input
@@ -778,8 +778,32 @@ export default function SeedreamSandbox() {
           gap: 32px;
           align-items: start;
         }
+        .page-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 16px;
+        }
+        .header-text {
+          text-align: left;
+        }
+        .volume-ratio-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px;
+        }
         @media (max-width: 900px) {
           .campaign-layout { grid-template-columns: 1fr; }
+          .page-header {
+            flex-direction: column;
+          }
+          .download-group {
+            flex-wrap: wrap;
+            width: 100%;
+          }
+        }
+        @media (max-width: 600px) {
+          .volume-ratio-grid { grid-template-columns: 1fr; }
         }
         .controls-column {
           display: flex;

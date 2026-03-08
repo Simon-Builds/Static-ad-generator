@@ -97,8 +97,8 @@ export default function BrandKit() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
-                <div style={{ textAlign: 'left' }}>
+            <header className="brand-header">
+                <div className="header-text">
                     <h1>Brand Kit</h1>
                     <p className="subtitle">Identify and analyze psychological buyer personas</p>
                 </div>
@@ -124,7 +124,7 @@ export default function BrandKit() {
                             style={{ minHeight: '150px' }}
                         />
                     </div>
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                    <div className="brand-actions">
                         <button
                             className="primary"
                             onClick={generateProfiles}
@@ -163,7 +163,7 @@ export default function BrandKit() {
                             <div className="card custom-persona-card">
                                 <h3 style={{ fontSize: '1.15rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '4px' }}>✏️ Add Custom Persona</h3>
                                 <p style={{ color: 'var(--muted)', fontSize: '0.9rem', marginBottom: '8px' }}>Fill in all four fields to define a unique audience segment.</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                                <div className="custom-persona-grid">
                                     <div className="form-group">
                                         <label>Archetype (Name)</label>
                                         <input
@@ -317,6 +317,44 @@ export default function BrandKit() {
             </section>
 
             <style jsx>{`
+                .brand-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 40px;
+                    gap: 16px;
+                }
+                .header-text {
+                    text-align: left;
+                }
+                .brand-actions {
+                    display: flex;
+                    gap: 12px;
+                    margin-top: 4px;
+                }
+                .custom-persona-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 16px;
+                    margin-bottom: 20px;
+                }
+                @media (max-width: 768px) {
+                    .brand-header {
+                        flex-direction: column;
+                        margin-bottom: 24px;
+                    }
+                    .brand-actions {
+                        flex-direction: column;
+                    }
+                    :global(.add-custom-btn) {
+                        width: 100%;
+                    }
+                }
+                @media (max-width: 600px) {
+                    .custom-persona-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
                 :global(.add-custom-btn) {
                     display: inline-flex;
                     align-items: center;
